@@ -16,7 +16,7 @@ TEST(bigint23, byteswap_test) {
     auto actual = byteswap(input);
     auto const actual_ptr = reinterpret_cast<char const *>(std::addressof(actual));
     auto const expected_ptr = reinterpret_cast<char const *>(std::addressof(expected));
-    for (int i = 0; i < sizeof(actual); i++) {
+    for (std::size_t i = 0; i < sizeof(actual); i++) {
         ASSERT_EQ(expected_ptr[i], actual_ptr[i]);
     }
 }
