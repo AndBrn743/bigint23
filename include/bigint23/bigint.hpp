@@ -22,6 +22,13 @@
 #include <string_view>
 #include <utility>
 
+
+#if defined(__cpp_constexpr) && __cpp_constexpr >= 202211L
+#define BIGINT23_STATIC23 static
+#else
+#define BIGINT23_STATIC23
+#endif
+
 namespace bigint {
 
     enum class BitWidth : std::size_t {};
@@ -31,18 +38,29 @@ namespace bigint {
         Unsigned
     };
 
+    namespace detail {
+#if !(defined(__cpp_lib_to_underlying) && __cpp_lib_to_underlying >= 202102L)
+        template<class Enum>
+        constexpr std::underlying_type_t<Enum> to_underlying(Enum e) noexcept {
+            return static_cast<std::underlying_type_t<Enum>>(e);
+        }
+#else
+        using std::to_underlying;
+#endif
+    }
+
     template<BitWidth bits, Signedness signedness>
     class bigint final {
     private:
-        static_assert(std::to_underlying(bits) % CHAR_BIT == 0, "bits must be a multiple of CHAR_BIT");
-        std::array<std::uint8_t, std::to_underlying(bits) / CHAR_BIT> data_{};
+        static_assert(detail::to_underlying(bits) % CHAR_BIT == 0, "bits must be a multiple of CHAR_BIT");
+        std::array<std::uint8_t, detail::to_underlying(bits) / CHAR_BIT> data_{};
 
     public:
         [[nodiscard]] constexpr bigint() = default;
 
         template<std::integral T>
         [[nodiscard]] constexpr bigint(T const data) {
-            static_assert(std::to_underlying(bits) / CHAR_BIT >= sizeof(T),
+            static_assert(detail::to_underlying(bits) / CHAR_BIT >= sizeof(T),
                           "Can't assign values with a larger bit count than the target type.");
 
             auto fill = std::uint8_t{0};
@@ -71,11 +89,11 @@ namespace bigint {
             data_.fill(fill);
 
             if constexpr (std::endian::native == std::endian::little) {
-                for (auto const i: std::views::iota(0uz, other.data_.size())) {
+                for (auto const i: std::views::iota(std::size_t{0}, other.data_.size())) {
                     data_[i] = other.data_[i];
                 }
             } else {
-                for (auto const i: std::views::reverse(std::views::iota(1uz, other.data_.size() + 1))) {
+                for (auto const i: std::views::reverse(std::views::iota(std::size_t{1}, other.data_.size() + 1))) {
                     data_[data_.size() - i - 1] = other.data_[other.data_.size() - i - 1];
                 }
             }
@@ -152,7 +170,7 @@ namespace bigint {
 
         template<std::integral T>
         [[nodiscard]] constexpr std::strong_ordering operator<=>(T const other) const {
-            static_assert(std::to_underlying(bits) / CHAR_BIT >= sizeof(T),
+            static_assert(detail::to_underlying(bits) / CHAR_BIT >= sizeof(T),
                           "Can't compare values with a larger bit count than the target type.");
 
             auto fill = std::uint8_t{0};
@@ -160,12 +178,12 @@ namespace bigint {
                 fill = (other < 0 ? 0xFF : 0);
             }
 
-            std::array<std::uint8_t, std::to_underlying(bits) / CHAR_BIT> extended{};
+            std::array<std::uint8_t, detail::to_underlying(bits) / CHAR_BIT> extended{};
             extended.fill(fill);
 
             if constexpr (std::endian::native == std::endian::little) {
                 std::copy_n(reinterpret_cast<std::uint8_t const * const>(&other), sizeof(T), extended.begin());
-                for (auto const i: std::views::reverse(std::views::iota(1uz, extended.size() + 1))) {
+                for (auto const i: std::views::reverse(std::views::iota(std::size_t{1}, extended.size() + 1))) {
                     if constexpr (std::is_signed_v<T>) {
                         if (static_cast<std::int8_t>(data_[i - 1]) < static_cast<std::int8_t>(extended[i - 1])) {
                             return std::strong_ordering::less;
@@ -185,7 +203,7 @@ namespace bigint {
             } else {
                 std::copy_n(reinterpret_cast<std::uint8_t const * const>(&other), sizeof(T),
                             extended.end() - sizeof(T));
-                for (auto const i: std::views::iota(0uz, extended.size())) {
+                for (auto const i: std::views::iota(std::size_t{0}, extended.size())) {
                     if constexpr (std::is_signed_v<T>) {
                         if (static_cast<std::int8_t>(data_[i]) < static_cast<std::int8_t>(extended[i])) {
                             return std::strong_ordering::less;
@@ -209,7 +227,7 @@ namespace bigint {
 
         template<std::integral T>
         [[nodiscard]] constexpr bool operator==(T const other) const {
-            static_assert(std::to_underlying(bits) / CHAR_BIT >= sizeof(T),
+            static_assert(detail::to_underlying(bits) / CHAR_BIT >= sizeof(T),
                           "Can't compare values with a larger bit count than the target type.");
             if constexpr (std::is_signed_v<T> and signedness == Signedness::Unsigned) {
                 if (other < 0) {
@@ -222,7 +240,7 @@ namespace bigint {
                 fill = (other < 0 ? 0xFF : 0);
             }
 
-            std::array<std::uint8_t, std::to_underlying(bits) / CHAR_BIT> extended{};
+            std::array<std::uint8_t, detail::to_underlying(bits) / CHAR_BIT> extended{};
             extended.fill(fill);
 
             if constexpr (std::endian::native == std::endian::little) {
@@ -238,9 +256,9 @@ namespace bigint {
         template<BitWidth other_bits, Signedness other_signedness>
         [[nodiscard]] constexpr std::strong_ordering operator
         <=>(bigint<other_bits, other_signedness> const &other) const {
-            static constexpr std::size_t lhs_size = std::to_underlying(bits) / CHAR_BIT;
-            static constexpr std::size_t rhs_size = std::to_underlying(other_bits) / CHAR_BIT;
-            static constexpr std::size_t max_size = (lhs_size > rhs_size ? lhs_size : rhs_size);
+            BIGINT23_STATIC23 constexpr std::size_t lhs_size = detail::to_underlying(bits) / CHAR_BIT;
+            BIGINT23_STATIC23 constexpr std::size_t rhs_size = detail::to_underlying(other_bits) / CHAR_BIT;
+            BIGINT23_STATIC23 constexpr std::size_t max_size = (lhs_size > rhs_size ? lhs_size : rhs_size);
 
             std::array<std::uint8_t, max_size> lhs_extended{};
             std::array<std::uint8_t, max_size> rhs_extended{};
@@ -282,7 +300,7 @@ namespace bigint {
             }
 
             if constexpr (std::endian::native == std::endian::little) {
-                for (auto const i: std::views::reverse(std::views::iota(0uz, max_size))) {
+                for (auto const i: std::views::reverse(std::views::iota(std::size_t{0}, max_size))) {
                     std::strong_ordering value{std::strong_ordering::equal};
                     if (spaceship_check_index<max_size, other_signedness>(lhs_extended, rhs_extended, i, value)) {
                         return value;
@@ -317,7 +335,7 @@ namespace bigint {
                     fill = other < std::int8_t{0} ? 0xFF : 0;
                 }
 
-                std::array<std::uint8_t, std::to_underlying(bits) / CHAR_BIT> extended{};
+                std::array<std::uint8_t, detail::to_underlying(bits) / CHAR_BIT> extended{};
                 extended.fill(fill);
 
                 if constexpr (std::endian::native == std::endian::little) {
@@ -345,8 +363,8 @@ namespace bigint {
 
         template<BitWidth other_bits, Signedness other_signedness>
         constexpr bigint &operator+=(bigint<other_bits, other_signedness> const &other) {
-            static constexpr std::size_t this_size = std::to_underlying(bits) / CHAR_BIT;
-            static constexpr std::size_t other_size = std::to_underlying(other_bits) / CHAR_BIT;
+            BIGINT23_STATIC23 constexpr std::size_t this_size = detail::to_underlying(bits) / CHAR_BIT;
+            BIGINT23_STATIC23 constexpr std::size_t other_size = detail::to_underlying(other_bits) / CHAR_BIT;
             auto carry = std::uint16_t{0};
 
             auto fill = std::uint8_t{0};
@@ -362,7 +380,7 @@ namespace bigint {
                 }
             }
 
-            for (auto const i: std::views::iota(0uz, this_size)) {
+            for (auto const i: std::views::iota(std::size_t{0}, this_size)) {
                 if constexpr (std::endian::native == std::endian::little) {
                     auto const other_byte = std::uint16_t{i < other_size ? other.data_[i] : fill};
                     auto const sum = static_cast<std::uint16_t>(
@@ -420,14 +438,14 @@ namespace bigint {
                 }
             }
 
-            static constexpr auto n = std::size_t{std::to_underlying(bits) / CHAR_BIT};
-            static constexpr auto m = std::size_t{std::to_underlying(other_bits) / CHAR_BIT};
+            BIGINT23_STATIC23 constexpr auto n = std::size_t{detail::to_underlying(bits) / CHAR_BIT};
+            BIGINT23_STATIC23 constexpr auto m = std::size_t{detail::to_underlying(other_bits) / CHAR_BIT};
             auto result = bigint{};
 
-            for (auto const i: std::views::iota(0uz, n)) {
+            for (auto const i: std::views::iota(std::size_t{0}, n)) {
                 if constexpr (std::endian::native == std::endian::little) {
                     auto carry = std::uint16_t{0};
-                    for (auto const j: std::views::iota(0uz, m)) {
+                    for (auto const j: std::views::iota(std::size_t{0}, m)) {
                         if (i + j >= n) {
                             break;
                         }
@@ -446,7 +464,7 @@ namespace bigint {
                 } else {
                     auto const idx1 = std::size_t{n - 1 - i};
                     auto carry = std::uint16_t{0};
-                    for (auto const j: std::views::iota(0uz, m)) {
+                    for (auto const j: std::views::iota(std::size_t{0}, m)) {
                         if (i + j >= n) {
                             break;
                         }
@@ -498,8 +516,8 @@ namespace bigint {
 
         template<BitWidth other_bits, Signedness other_signedness>
         constexpr bigint &operator-=(bigint<other_bits, other_signedness> const &other) {
-            static constexpr auto this_size = std::size_t{std::to_underlying(bits) / CHAR_BIT};
-            static constexpr auto other_size = std::size_t{std::to_underlying(other_bits) / CHAR_BIT};
+            BIGINT23_STATIC23 constexpr auto this_size = std::size_t{detail::to_underlying(bits) / CHAR_BIT};
+            BIGINT23_STATIC23 constexpr auto other_size = std::size_t{detail::to_underlying(other_bits) / CHAR_BIT};
 
             auto fill = std::uint8_t{0};
             if constexpr (other_signedness == Signedness::Signed and other_size <= this_size) {
@@ -515,7 +533,7 @@ namespace bigint {
             }
 
             std::uint16_t borrow = 0;
-            for (auto const i: std::views::iota(0uz, this_size)) {
+            for (auto const i: std::views::iota(std::size_t{0}, this_size)) {
                 if constexpr (std::endian::native == std::endian::little) {
                     auto const other_byte = std::uint16_t{i < other_size ? other.data_[i] : fill};
                     auto diff = static_cast<std::int16_t>(
@@ -574,9 +592,9 @@ namespace bigint {
 
             auto quotient = bigint{};
             auto remainder = bigint{};
-            static constexpr auto total_bits = std::to_underlying(bits);
+            BIGINT23_STATIC23 constexpr auto total_bits = detail::to_underlying(bits);
 
-            for (auto const i: std::views::reverse(std::views::iota(0uz, total_bits))) {
+            for (auto const i: std::views::reverse(std::views::iota(std::size_t{0}, total_bits))) {
                 remainder <<= std::int8_t{1};
                 if (this->get_bit(i)) {
                     remainder += std::int8_t{1};
@@ -618,9 +636,9 @@ namespace bigint {
 
             auto quotient = bigint{};
             auto remainder = bigint{};
-            static constexpr auto total_bits = std::to_underlying(bits);
+            BIGINT23_STATIC23 constexpr auto total_bits = detail::to_underlying(bits);
 
-            for (auto const i: std::views::reverse(std::views::iota(0uz, total_bits))) {
+            for (auto const i: std::views::reverse(std::views::iota(std::size_t{0}, total_bits))) {
                 remainder <<= std::int8_t{1};
                 if (this->get_bit(i)) {
                     remainder += std::int8_t{1};
@@ -642,7 +660,7 @@ namespace bigint {
         }
 
         constexpr bigint &operator<<=(std::size_t const shift) {
-            static constexpr auto n = std::size_t{std::to_underlying(bits) / CHAR_BIT};
+            BIGINT23_STATIC23 constexpr auto n = std::size_t{detail::to_underlying(bits) / CHAR_BIT};
             if (shift == 0) {
                 return *this;
             }
@@ -651,7 +669,7 @@ namespace bigint {
             auto const bit_shift = std::size_t{shift % CHAR_BIT};
             auto result = std::array<std::uint8_t, n>{};
 
-            for (auto const i: std::views::iota(0uz, n)) {
+            for (auto const i: std::views::iota(std::size_t{0}, n)) {
                 if constexpr (std::endian::native == std::endian::little) {
                     if (i + byte_shift < n) {
                         result[i + byte_shift] = data_[i];
@@ -664,7 +682,7 @@ namespace bigint {
             }
 
             auto carry = std::uint16_t{0};
-            for (auto const i: std::views::iota(0uz, n)) {
+            for (auto const i: std::views::iota(std::size_t{0}, n)) {
                 auto const temp = static_cast<std::uint16_t>(
                     (static_cast<std::uint16_t>(result[i]) << bit_shift) | carry);
                 result[i] = static_cast<std::uint8_t>(temp & 0xFF);
@@ -682,7 +700,7 @@ namespace bigint {
         }
 
         constexpr bigint &operator>>=(std::size_t const shift) {
-            static constexpr auto n = std::size_t{std::to_underlying(bits) / CHAR_BIT};
+            BIGINT23_STATIC23 constexpr auto n = std::size_t{detail::to_underlying(bits) / CHAR_BIT};
             if (shift == 0) {
                 return *this;
             }
@@ -700,7 +718,7 @@ namespace bigint {
                 }
             }
 
-            if (shift >= std::to_underlying(bits)) {
+            if (shift >= detail::to_underlying(bits)) {
                 data_.fill(fill);
                 return *this;
             }
@@ -709,7 +727,7 @@ namespace bigint {
             auto const bit_shift = std::size_t{shift % CHAR_BIT};
             auto result = std::array<std::uint8_t, n>{};
 
-            for (auto const i: std::views::iota(0uz, n)) {
+            for (auto const i: std::views::iota(std::size_t{0}, n)) {
                 if constexpr (std::endian::native == std::endian::little) {
                     auto const lower = (i + byte_shift < n) ? data_[i + byte_shift] : fill;
                     auto const upper = (i + byte_shift + 1 < n) ? data_[i + byte_shift + 1] : fill;
@@ -791,7 +809,7 @@ namespace bigint {
         }
 
         constexpr bigint &operator&=(bigint const &other) {
-            for (auto const i: std::views::iota(0uz, data_.size())) {
+            for (auto const i: std::views::iota(std::size_t{0}, data_.size())) {
                 data_[i] &= other.data_[i];
             }
             return *this;
@@ -804,7 +822,7 @@ namespace bigint {
         }
 
         constexpr bigint &operator|=(bigint const &other) {
-            for (auto const i: std::views::iota(0uz, data_.size())) {
+            for (auto const i: std::views::iota(std::size_t{0}, data_.size())) {
                 data_[i] |= other.data_[i];
             }
             return *this;
@@ -817,7 +835,7 @@ namespace bigint {
         }
 
         constexpr bigint &operator^=(bigint const &other) {
-            for (auto const i: std::views::iota(0uz, data_.size())) {
+            for (auto const i: std::views::iota(std::size_t{0}, data_.size())) {
                 data_[i] ^= other.data_[i];
             }
             return *this;
@@ -888,13 +906,13 @@ namespace bigint {
         constexpr void multiply_by(std::uint32_t const multiplier) {
             auto carry = std::uint32_t{0};
             if constexpr (std::endian::native == std::endian::little) {
-                for (auto const i: std::views::iota(0uz, data_.size())) {
+                for (auto const i: std::views::iota(std::size_t{0}, data_.size())) {
                     auto const prod = std::uint32_t{static_cast<std::uint32_t>(data_[i]) * multiplier + carry};
                     data_[i] = static_cast<std::uint8_t>(prod & 0xFF);
                     carry = prod >> 8;
                 }
             } else {
-                for (auto const i: std::views::reverse(std::views::iota(1uz, data_.size() + 1))) {
+                for (auto const i: std::views::reverse(std::views::iota(std::size_t{1}, data_.size() + 1))) {
                     auto const idx = std::size_t{i - 1};
                     auto const prod = std::uint32_t{static_cast<std::uint32_t>(data_[idx]) * multiplier + carry};
                     data_[idx] = static_cast<std::uint8_t>(prod & 0xFF);
@@ -909,13 +927,13 @@ namespace bigint {
         constexpr void add_value(std::uint8_t const value) {
             auto carry = std::uint16_t{value};
             if constexpr (std::endian::native == std::endian::little) {
-                for (auto i = 0uz; i < data_.size() and carry; ++i) {
+                for (auto i = std::size_t{0}; i < data_.size() && carry; ++i) {
                     auto const sum = static_cast<std::uint16_t>(static_cast<std::uint16_t>(data_[i]) + carry);
                     data_[i] = static_cast<std::uint8_t>(sum & 0xFF);
                     carry = sum >> 8;
                 }
             } else {
-                for (auto i = data_.size(); i > 0uz and carry; --i) {
+                for (auto i = data_.size(); i > std::size_t{0} && carry; --i) {
                     auto const idx = std::size_t{i - 1};
                     auto const sum = static_cast<std::uint16_t>(static_cast<std::uint16_t>(data_[idx]) + carry);
                     data_[idx] = static_cast<std::uint8_t>(sum & 0xFF);
@@ -1006,7 +1024,8 @@ namespace bigint {
 
 #ifndef bigint_DISABLE_IO
     template<BitWidth bits, Signedness signedness>
-    constexpr std::ostream &print_hex(std::ostream &os, bigint<bits, signedness> const &data, bool const use_uppercase) {
+    constexpr std::ostream &print_hex(std::ostream &os, bigint<bits, signedness> const &data,
+                                      bool const use_uppercase) {
         auto const &buf = data.data_;
         auto start = buf.size();
         while (start > 1 and buf[start - 1] == 0) {
@@ -1014,7 +1033,7 @@ namespace bigint {
         }
 
         if constexpr (std::endian::native == std::endian::little) {
-            for (auto const i: std::views::reverse(std::views::iota(0uz, start))) {
+            for (auto const i: std::views::reverse(std::views::iota(std::size_t{0}, start))) {
                 auto local = std::array<char, 3>{};
                 std::snprintf(
                     local.data(),
@@ -1025,7 +1044,7 @@ namespace bigint {
                 os.write(local.data(), local.size() - 1);
             }
         } else {
-            for (auto const i: std::views::iota(0uz, start)) {
+            for (auto const i: std::views::iota(std::size_t{0}, start)) {
                 auto local = std::array<char, 3>{};
                 std::snprintf(
                     local.data(),
@@ -1049,7 +1068,7 @@ namespace bigint {
             return os;
         }
 
-        constexpr auto max_oct_digits = std::size_t{(std::to_underlying(bits) / 3) + 2};
+        constexpr auto max_oct_digits = std::size_t{(detail::to_underlying(bits) / 3) + 2};
         auto buffer = std::array<char, max_oct_digits>{};
         auto pos = buffer.end();
 
@@ -1082,7 +1101,9 @@ namespace bigint {
             }
         }
 
-        constexpr auto max_dec_digits = std::size_t{static_cast<std::size_t>(std::to_underlying(bits) * 0.3010299957) + 3}; //std::log10(2)
+        constexpr auto max_dec_digits = std::size_t{
+            static_cast<std::size_t>(detail::to_underlying(bits) * 0.3010299957) + 3
+        }; //std::log10(2)
         auto buffer = std::array<char, max_dec_digits>{};
         auto pos = buffer.end();
 
@@ -1176,3 +1197,5 @@ namespace bigint {
         }
     }
 }
+
+#undef BIGINT23_STATIC23
