@@ -100,7 +100,7 @@ namespace bigint {
         }
 
         [[nodiscard]] constexpr bigint(std::string_view const str) {
-            if (str.length() > 2 and str[0] == '0') {
+            if (str.length() > 2 && str[0] == '0') {
                 switch (str[1]) {
                     case 'x':
                         init_from_string_base(str.substr(2), 16);
@@ -229,7 +229,7 @@ namespace bigint {
         [[nodiscard]] constexpr bool operator==(T const other) const {
             static_assert(detail::to_underlying(bits) / CHAR_BIT >= sizeof(T),
                           "Can't compare values with a larger bit count than the target type.");
-            if constexpr (std::is_signed_v<T> and signedness == Signedness::Unsigned) {
+            if constexpr (std::is_signed_v<T> && signedness == Signedness::Unsigned) {
                 if (other < 0) {
                     return false;
                 }
@@ -324,7 +324,7 @@ namespace bigint {
                 return other == *this;
             } else {
                 static_assert(bits >= other_bits, "Can't compare values with a larger bit count than the target type.");
-                if constexpr (other_signedness == Signedness::Signed and signedness == Signedness::Unsigned) {
+                if constexpr (other_signedness == Signedness::Signed && signedness == Signedness::Unsigned) {
                     if (other < std::int8_t{0}) {
                         return false;
                     }
@@ -520,7 +520,7 @@ namespace bigint {
             BIGINT23_STATIC23 constexpr auto other_size = std::size_t{detail::to_underlying(other_bits) / CHAR_BIT};
 
             auto fill = std::uint8_t{0};
-            if constexpr (other_signedness == Signedness::Signed and other_size <= this_size) {
+            if constexpr (other_signedness == Signedness::Signed && other_size <= this_size) {
                 if constexpr (std::endian::native == std::endian::little) {
                     if (other.data_[other_size - 1] & 0x80) {
                         fill = 0xFF;
@@ -738,9 +738,9 @@ namespace bigint {
                     }
                 } else {
                     auto const src = static_cast<int>(i) - static_cast<int>(byte_shift);
-                    auto const lower = (src >= 0 and static_cast<std::size_t>(src) < n) ? data_[src] : fill;
+                    auto const lower = (src >= 0 && static_cast<std::size_t>(src) < n) ? data_[src] : fill;
                     auto const src2 = src - 1;
-                    auto const higher = (src2 >= 0 and static_cast<std::size_t>(src2) < n) ? data_[src2] : fill;
+                    auto const higher = (src2 >= 0 && static_cast<std::size_t>(src2) < n) ? data_[src2] : fill;
                     if (bit_shift == 0) {
                         result[i] = lower;
                     } else {
@@ -948,15 +948,15 @@ namespace bigint {
         constexpr void init_from_string_base(std::string_view const str, std::uint32_t const base) {
             data_.fill(0);
             for (auto const c: str) {
-                if (c == '\'' or c == ' ') {
+                if (c == '\'' || c == ' ') {
                     continue;
                 }
                 std::uint8_t digit = 0;
-                if (c >= '0' and c <= '9') {
+                if (c >= '0' && c <= '9') {
                     digit = c - '0';
-                } else if (c >= 'a' and c <= 'f') {
+                } else if (c >= 'a' && c <= 'f') {
                     digit = 10 + (c - 'a');
-                } else if (c >= 'A' and c <= 'F') {
+                } else if (c >= 'A' && c <= 'F') {
                     digit = 10 + (c - 'A');
                 } else {
                     throw std::runtime_error("Invalid digit in input string.");
@@ -973,7 +973,7 @@ namespace bigint {
         constexpr bool spaceship_check_index(std::array<std::uint8_t, max_size> lhs_extended,
                                              std::array<std::uint8_t, max_size> rhs_extended,
                                              std::size_t const i, std::strong_ordering &value) const {
-            if constexpr (signedness == Signedness::Unsigned and other_signedness == Signedness::Unsigned) {
+            if constexpr (signedness == Signedness::Unsigned && other_signedness == Signedness::Unsigned) {
                 auto const a = lhs_extended[i];
                 auto const b = rhs_extended[i];
                 if (a < b) {
@@ -984,7 +984,7 @@ namespace bigint {
                     value = std::strong_ordering::greater;
                     return true;
                 }
-            } else if constexpr (signedness == Signedness::Unsigned and signedness == Signedness::Signed) {
+            } else if constexpr (signedness == Signedness::Unsigned && signedness == Signedness::Signed) {
                 auto const a = lhs_extended[i];
                 auto const b = static_cast<std::int8_t>(rhs_extended[i]);
                 if (a < b) {
@@ -995,7 +995,7 @@ namespace bigint {
                     value = std::strong_ordering::greater;
                     return true;
                 }
-            } else if constexpr (signedness == Signedness::Signed and other_signedness == Signedness::Unsigned) {
+            } else if constexpr (signedness == Signedness::Signed && other_signedness == Signedness::Unsigned) {
                 auto const a = static_cast<std::int8_t>(lhs_extended[i]);
                 auto const b = rhs_extended[i];
                 if (a < b) {
@@ -1028,7 +1028,7 @@ namespace bigint {
                                       bool const use_uppercase) {
         auto const &buf = data.data_;
         auto start = buf.size();
-        while (start > 1 and buf[start - 1] == 0) {
+        while (start > 1 && buf[start - 1] == 0) {
             --start;
         }
 
@@ -1162,7 +1162,7 @@ namespace bigint {
         }
         try {
             if (base != 10) {
-                if (!token.empty() and token[0] == '-') {
+                if (!token.empty() && token[0] == '-') {
                     throw std::runtime_error("Negative sign not allowed for non-decimal input");
                 }
                 data = bigint<bits, signedness>();
