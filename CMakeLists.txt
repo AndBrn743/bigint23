@@ -18,25 +18,11 @@ add_library(bigint::bigint ALIAS bigint)
 
 if(MSVC)
     target_compile_options(bigint INTERFACE
-            /W4          # Warning level 4 (almost all warnings)
-            /WX          # Treat warnings as errors
-            /permissive- # Strict conformance mode
+            /W4             # Warning level 4 (almost all warnings)
+            /WX             # Treat warnings as errors
+            /permissive-    # Strict conformance mode
             /Zc:__cplusplus # Enable correct __cplusplus macro
-            /utf-8       # UTF-8 source and execution character sets
-    )
-
-    # Debug-specific flags
-    target_compile_options(bigint INTERFACE
-            $<$<CONFIG:Debug>:/Od>                  # No optimization
-            $<$<CONFIG:Debug>:/Zi>                  # Debug info
-            $<$<CONFIG:Debug>:/RTC1>                # Runtime checks
-    )
-
-    # RelWithDebInfo-specific flags
-    target_compile_options(bigint INTERFACE
-            $<$<CONFIG:RelWithDebInfo>:/O2>         # Optimize for speed
-            $<$<CONFIG:RelWithDebInfo>:/Zi>         # Debug info
-            $<$<CONFIG:RelWithDebInfo>:/DNDEBUG>    # Define NDEBUG
+            /utf-8          # UTF-8 source and execution character sets
     )
 endif()
 
