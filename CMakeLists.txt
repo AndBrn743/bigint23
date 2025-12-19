@@ -26,14 +26,18 @@ if(MSVC)
     )
 
     # Debug-specific flags
-    target_compile_options(bigint INTERFACE $<$<CONFIG:Debug>:/Od>)   # No optimization
-    target_compile_options(bigint INTERFACE $<$<CONFIG:Debug>:/Zi>)   # Debug info
-    target_compile_options(bigint INTERFACE $<$<CONFIG:Debug>:/RTC1>) # Runtime checks
+    target_compile_options(bigint INTERFACE
+            $<$<CONFIG:Debug>:/Od>                  # No optimization
+            $<$<CONFIG:Debug>:/Zi>                  # Debug info
+            $<$<CONFIG:Debug>:/RTC1>                # Runtime checks
+    )
 
     # RelWithDebInfo-specific flags
-    target_compile_options(bigint INTERFACE $<$<CONFIG:RelWithDebInfo>:/O2>)    # Optimize for speed
-    target_compile_options(bigint INTERFACE $<$<CONFIG:RelWithDebInfo>:/Zi>)    # Debug info
-    target_compile_options(bigint INTERFACE $<$<CONFIG:RelWithDebInfo>:/DNDEBUG>) # Define NDEBUG
+    target_compile_options(bigint INTERFACE
+            $<$<CONFIG:RelWithDebInfo>:/O2>         # Optimize for speed
+            $<$<CONFIG:RelWithDebInfo>:/Zi>         # Debug info
+            $<$<CONFIG:RelWithDebInfo>:/DNDEBUG>    # Define NDEBUG
+    )
 endif()
 
 # download CPM.cmake
