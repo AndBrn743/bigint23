@@ -16,16 +16,6 @@ add_library(
 )
 add_library(bigint::bigint ALIAS bigint)
 
-if(MSVC)
-    target_compile_options(bigint INTERFACE
-            /W4             # Warning level 4 (almost all warnings)
-            /WX             # Treat warnings as errors
-            /permissive-    # Strict conformance mode
-            /Zc:__cplusplus # Enable correct __cplusplus macro
-            /utf-8          # UTF-8 source and execution character sets
-    )
-endif()
-
 # download CPM.cmake
 file(
         DOWNLOAD
