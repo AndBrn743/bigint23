@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(bigint LANGUAGES C CXX VERSION 2.2)
+project(bigint LANGUAGES C CXX VERSION 2.3)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,6 +15,26 @@ add_library(
         include/bigint23/bigint.hpp
 )
 add_library(bigint::bigint ALIAS bigint)
+
+if(MSVC)
+    target_compile_options(bigint INTERFACE
+            /W4          # Warning level 4 (almost all warnings)
+            /WX          # Treat warnings as errors
+            /permissive- # Strict conformance mode
+            /Zc:__cplusplus # Enable correct __cplusplus macro
+            /utf-8       # UTF-8 source and execution character sets
+    )
+
+    # Debug-specific flags
+    target_compile_options(bigint INTERFACE $<$<CONFIG:Debug>:/Od>)   # No optimization
+    target_compile_options(bigint INTERFACE $<$<CONFIG:Debug>:/Zi>)   # Debug info
+    target_compile_options(bigint INTERFACE $<$<CONFIG:Debug>:/RTC1>) # Runtime checks
+
+    # RelWithDebInfo-specific flags
+    target_compile_options(bigint INTERFACE $<$<CONFIG:RelWithDebInfo>:/O2>)    # Optimize for speed
+    target_compile_options(bigint INTERFACE $<$<CONFIG:RelWithDebInfo>:/Zi>)    # Debug info
+    target_compile_options(bigint INTERFACE $<$<CONFIG:RelWithDebInfo>:/DNDEBUG>) # Define NDEBUG
+endif()
 
 # download CPM.cmake
 file(
