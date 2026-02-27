@@ -24,8 +24,8 @@ TEST(bigint23, byteswap_test) {
 TEST(bigint23, abs_test) {
     bigint::bigint<bigint::BitWidth{128}, bigint::Signedness::Unsigned> const expected = 1234567890;
     bigint::bigint<bigint::BitWidth{128}, bigint::Signedness::Signed> const input = -1234567890;
-    auto actual1 = abs(input);
+    auto const actual1 = abs(input);
     ASSERT_EQ(actual1, expected);
-    auto actual2 = abs(expected);
+    auto const actual2 = abs(expected);
     ASSERT_EQ(actual2, expected);
 }

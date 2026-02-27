@@ -70,11 +70,11 @@ namespace bigint {
             data_.fill(fill);
 
             if constexpr (std::endian::native == std::endian::little) {
-                std::copy_n(reinterpret_cast<std::uint8_t const * const>(std::addressof(data)), sizeof(T),
-                            data_.begin());
+                std::array<std::uint8_t, sizeof(T)> temp = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(data);
+                std::copy_n(temp.data(), temp.size(), data_.begin());
             } else {
-                std::copy_n(reinterpret_cast<std::uint8_t const * const>(std::addressof(data)), sizeof(T),
-                            data_.end() - sizeof(T));
+                std::array<std::uint8_t, sizeof(T)> temp = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(data);
+                std::copy_n(temp.data(), temp.size(), data_.end() - sizeof(T));
             }
         }
 
@@ -182,7 +182,8 @@ namespace bigint {
             extended.fill(fill);
 
             if constexpr (std::endian::native == std::endian::little) {
-                std::copy_n(reinterpret_cast<std::uint8_t const * const>(&other), sizeof(T), extended.begin());
+                std::array<std::uint8_t, sizeof(T)> temp = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(other);
+                std::copy_n(temp.data(), temp.size(), extended.begin());
                 for (auto const i: std::views::reverse(std::views::iota(std::size_t{1}, extended.size() + 1))) {
                     if constexpr (std::is_signed_v<T>) {
                         if (static_cast<std::int8_t>(data_[i - 1]) < static_cast<std::int8_t>(extended[i - 1])) {
@@ -201,8 +202,8 @@ namespace bigint {
                     }
                 }
             } else {
-                std::copy_n(reinterpret_cast<std::uint8_t const * const>(&other), sizeof(T),
-                            extended.end() - sizeof(T));
+                std::array<std::uint8_t, sizeof(T)> temp = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(other);
+                std::copy_n(temp.data(), temp.size(), extended.end() - sizeof(T));
                 for (auto const i: std::views::iota(std::size_t{0}, extended.size())) {
                     if constexpr (std::is_signed_v<T>) {
                         if (static_cast<std::int8_t>(data_[i]) < static_cast<std::int8_t>(extended[i])) {
@@ -244,10 +245,11 @@ namespace bigint {
             extended.fill(fill);
 
             if constexpr (std::endian::native == std::endian::little) {
-                std::copy_n(reinterpret_cast<std::uint8_t const * const>(&other), sizeof(T), extended.begin());
+                std::array<std::uint8_t, sizeof(T)> temp = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(other);
+                std::copy_n(temp.data(), temp.size(), extended.begin());
             } else {
-                std::copy_n(reinterpret_cast<std::uint8_t const * const>(&other), sizeof(T),
-                            extended.begin() + (extended.size() - sizeof(T)));
+                std::array<std::uint8_t, sizeof(T)> temp = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(other);
+                std::copy_n(temp.data(), temp.size(), extended.begin() + (extended.size() - sizeof(T)));
             }
 
             return extended == data_;
@@ -455,7 +457,7 @@ namespace bigint {
                         };
                         product += static_cast<std::uint32_t>(result.data_[i + j]) + carry;
                         result.data_[i + j] = static_cast<std::uint8_t>(product & 0xFF);
-                        carry = product >> 8;
+                        carry = static_cast<std::uint16_t>(product >> 8);
                     }
                     if (i + m < n) {
                         auto const sum = std::uint32_t{static_cast<std::uint32_t>(result.data_[i + m]) + carry};
@@ -476,7 +478,7 @@ namespace bigint {
                         };
                         product += static_cast<std::uint32_t>(result.data_[result_idx]) + carry;
                         result.data_[result_idx] = static_cast<std::uint8_t>(product & 0xFF);
-                        carry = product >> 8;
+                        carry = static_cast<std::uint16_t>(product >> 8);
                     }
                     if (i + m < n) {
                         auto const result_idx = std::size_t{n - 1 - (i + m)};
@@ -634,7 +636,6 @@ namespace bigint {
                 throw std::overflow_error("Division by zero");
             }
 
-            auto quotient = bigint{};
             auto remainder = bigint{};
             BIGINT23_STATIC23 constexpr auto total_bits = detail::to_underlying(bits);
 
@@ -953,11 +954,11 @@ namespace bigint {
                 }
                 std::uint8_t digit = 0;
                 if (c >= '0' && c <= '9') {
-                    digit = c - '0';
+                    digit = static_cast<std::uint8_t>(c - '0');
                 } else if (c >= 'a' && c <= 'f') {
-                    digit = 10 + (c - 'a');
+                    digit = static_cast<std::uint8_t>(10 + (c - 'a'));
                 } else if (c >= 'A' && c <= 'F') {
-                    digit = 10 + (c - 'A');
+                    digit = static_cast<std::uint8_t>(10 + (c - 'A'));
                 } else {
                     throw std::runtime_error("Invalid digit in input string.");
                 }
@@ -1079,7 +1080,7 @@ namespace bigint {
             temp /= std::int8_t{8};
         }
 
-        auto const length = static_cast<std::size_t>(buffer.end() - pos);
+        auto const length = static_cast<std::streamsize>(buffer.end() - pos);
         os.write(std::to_address(pos), length);
         return os;
     }
@@ -1118,7 +1119,7 @@ namespace bigint {
             os.put('-');
         }
 
-        auto const length = static_cast<std::size_t>(buffer.end() - pos);
+        auto const length = static_cast<std::streamsize>(buffer.end() - pos);
         os.write(std::to_address(pos), length);
         return os;
     }
