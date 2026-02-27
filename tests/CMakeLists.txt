@@ -24,5 +24,5 @@ target_link_libraries(
 )
 gtest_discover_tests(bigint_tests)
 
-set_target_properties(bigint_tests PROPERTIES CXX_STANDARD 23)
-target_compile_features(bigint_tests PUBLIC cxx_std_23)
+set_target_properties(bigint_tests PROPERTIES CXX_STANDARD 20)
+target_compile_features(bigint_tests PUBLIC cxx_std_20)
