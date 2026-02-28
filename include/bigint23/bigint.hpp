@@ -845,7 +845,7 @@ namespace bigint {
         [[nodiscard]] constexpr bigint operator~() const {
             auto result = bigint{*this};
             for (auto &byte: result.data_) {
-                byte = ~byte;
+                byte = static_cast<std::decay_t<decltype(byte)>>(~byte);
             }
             return result;
         }
